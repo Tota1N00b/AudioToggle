@@ -33,8 +33,8 @@ The app follows the Windows light or dark app theme.
 
 Download from the latest GitHub Release:
 
-- [AudioToggle-setup.exe](https://github.com/YOUR_GITHUB_USERNAME/AudioToggle/releases/latest/download/AudioToggle-setup.exe) for a normal app install.
-- [AudioToggle-portable.zip](https://github.com/YOUR_GITHUB_USERNAME/AudioToggle/releases/latest/download/AudioToggle-portable.zip) for installer-free use.
+- [AudioToggle-setup.exe](https://github.com/Tota1N00b/AudioToggle/releases/latest/download/AudioToggle-setup.exe) for a normal app install.
+- [AudioToggle-portable.zip](https://github.com/Tota1N00b/AudioToggle/releases/latest/download/AudioToggle-portable.zip) for installer-free use.
 
 If the links above do not work yet, open the repo's `Releases` page and download the latest `AudioToggle-setup.exe` or `AudioToggle-portable.zip`.
 
