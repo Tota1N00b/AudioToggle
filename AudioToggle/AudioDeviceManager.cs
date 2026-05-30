@@ -1,9 +1,14 @@
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace AudioToggle;
 
 internal sealed class AudioDeviceManager
 {
+    private const string RenderDevicesRegistryPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Render";
+    private const string DeviceDescriptionRegistryValueName = "{a45c254e-df1c-4efd-8020-67d146a850e0},2";
+    private const string EndpointNameRegistryValueName = "{b3f8fa53-0004-438e-9003-51a46e139bfc},6";
+
     public IReadOnlyList<AudioDeviceInfo> GetActiveRenderDevices()
     {
         var enumerator = CreateEnumerator();
@@ -35,7 +40,7 @@ internal sealed class AudioDeviceManager
                     try
                     {
                         var id = GetDeviceId(device);
-                        var friendlyName = GetFriendlyName(device);
+                        var friendlyName = GetFriendlyName(id);
 
                         devices.Add(new AudioDeviceInfo
                         {
@@ -135,30 +140,58 @@ internal sealed class AudioDeviceManager
             : id;
     }
 
-    private static string GetFriendlyName(IMMDevice device)
+    private static string GetFriendlyName(string deviceId)
     {
-        Marshal.ThrowExceptionForHR(device.OpenPropertyStore(StorageAccessMode.Read, out var propertyStore));
-        if (propertyStore is null)
+        return ReadRegistryFriendlyName(deviceId) ?? "Unknown device";
+    }
+
+    private static string? ReadRegistryFriendlyName(string deviceId)
+    {
+        var endpointKeyName = GetEndpointKeyName(deviceId);
+        if (endpointKeyName is null)
         {
-            return "Unknown device";
+            return null;
         }
 
-        try
+        using var propertiesKey = Registry.LocalMachine.OpenSubKey($@"{RenderDevicesRegistryPath}\{endpointKeyName}\Properties", writable: false);
+        if (propertiesKey is null)
         {
-            Marshal.ThrowExceptionForHR(propertyStore.GetValue(PropertyKeys.PKEY_Device_FriendlyName, out var value));
-            try
-            {
-                return value.GetString() ?? "Unknown device";
-            }
-            finally
-            {
-                value.Dispose();
-            }
+            return null;
         }
-        finally
+
+        return BuildFallbackFriendlyName(
+            ReadRegistryString(propertiesKey, DeviceDescriptionRegistryValueName),
+            ReadRegistryString(propertiesKey, EndpointNameRegistryValueName));
+    }
+
+    private static string? GetEndpointKeyName(string deviceId)
+    {
+        var endpointStart = deviceId.LastIndexOf(".{", StringComparison.Ordinal);
+        return endpointStart >= 0 && endpointStart + 1 < deviceId.Length
+            ? deviceId[(endpointStart + 1)..]
+            : null;
+    }
+
+    private static string? ReadRegistryString(RegistryKey key, string valueName)
+    {
+        return key.GetValue(valueName) is string text && !string.IsNullOrWhiteSpace(text)
+            ? text.Trim()
+            : null;
+    }
+
+    private static string BuildFallbackFriendlyName(string? deviceDescription, string? endpointName)
+    {
+        if (deviceDescription is null)
         {
-            ReleaseComObject(propertyStore);
+            return endpointName ?? "Unknown device";
         }
+
+        if (endpointName is null || string.Equals(deviceDescription, endpointName, StringComparison.OrdinalIgnoreCase))
+        {
+            return deviceDescription;
+        }
+
+        return $"{deviceDescription} ({endpointName})";
     }
 
     private static void ReleaseComObject(object? comObject)

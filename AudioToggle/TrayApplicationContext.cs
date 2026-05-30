@@ -37,7 +37,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _contextMenu = BuildContextMenu();
         ApplyContextMenuTheme();
 
-        _currentTrayIcon = _iconManager.CreateTrayIcon();
+        _currentTrayIcon = _iconManager.CreateTrayIcon(GetTrayIconState());
         _notifyIcon = new NotifyIcon
         {
             Icon = _currentTrayIcon,
@@ -135,11 +135,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private void IconManagerOnThemeChanged(object? sender, EventArgs e)
     {
-        var newIcon = _iconManager.CreateTrayIcon();
-        var oldIcon = _currentTrayIcon;
-        _currentTrayIcon = newIcon;
-        _notifyIcon.Icon = newIcon;
-        oldIcon?.Dispose();
+        UpdateTrayIcon();
     }
 
     private void ThemeManagerOnThemeChanged(object? sender, EventArgs e)
@@ -167,6 +163,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             _config.SetSelectedDeviceIds(selectedIds);
             SaveConfig();
+            UpdateTrayIcon();
             RefreshSettingsBinding();
             return;
         }
@@ -180,6 +177,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         selectedIds.Add(deviceId);
         _config.SetSelectedDeviceIds(selectedIds);
         SaveConfig();
+        UpdateTrayIcon();
         RefreshSettingsBinding();
     }
 
@@ -187,6 +185,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         _config.SetSelectedDeviceIds([]);
         SaveConfig();
+        UpdateTrayIcon();
         RefreshSettingsBinding();
     }
 
@@ -212,6 +211,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             _devices = _audioDeviceManager.GetActiveRenderDevices().ToList();
             UpdateTrayText();
+            UpdateTrayIcon();
             RefreshSettingsBinding();
 
             if (showNotification)
@@ -233,6 +233,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             var message = "Select 2 devices before toggling.";
             RefreshSettingsBinding(message);
+            UpdateTrayIcon();
             if (showNotification)
             {
                 ShowNotification("Audio Toggle", message, OpenSettingsNotificationAction);
@@ -254,6 +255,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             }
 
             UpdateTrayText();
+            UpdateTrayIcon();
             return;
         }
 
@@ -336,14 +338,57 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private void UpdateTrayText()
     {
-        var currentDefaultId = _devices.FirstOrDefault(device => device.IsDefaultMultimedia)?.Id
-            ?? _devices.FirstOrDefault(device => device.IsDefaultConsole)?.Id
-            ?? _devices.FirstOrDefault(device => device.IsDefaultCommunications)?.Id;
+        var currentDefaultId = GetCurrentDefaultDeviceId();
         var currentName = _devices.FirstOrDefault(device => device.Id == currentDefaultId)?.FriendlyName
             ?? "Unknown output";
 
-        var tooltip = $"Audio Toggle: {currentName}";
+        var tooltip = $"Audio Toggle{Environment.NewLine}{Environment.NewLine}{currentName}";
         _notifyIcon.Text = tooltip.Length <= 63 ? tooltip : tooltip[..63];
+    }
+
+    private void UpdateTrayIcon()
+    {
+        var newIcon = _iconManager.CreateTrayIcon(GetTrayIconState());
+        var oldIcon = _currentTrayIcon;
+        _currentTrayIcon = newIcon;
+        _notifyIcon.Icon = newIcon;
+        oldIcon?.Dispose();
+    }
+
+    private TrayIconState GetTrayIconState()
+    {
+        var selectedIds = _config.GetSelectedDeviceIds();
+        if (selectedIds.Count != 2)
+        {
+            return TrayIconState.Error;
+        }
+
+        var primaryDevice = _devices.FirstOrDefault(device => string.Equals(device.Id, selectedIds[0], StringComparison.Ordinal));
+        var secondaryDevice = _devices.FirstOrDefault(device => string.Equals(device.Id, selectedIds[1], StringComparison.Ordinal));
+        if (primaryDevice is null || secondaryDevice is null)
+        {
+            return TrayIconState.Error;
+        }
+
+        var currentDefaultId = GetCurrentDefaultDeviceId();
+        if (string.Equals(currentDefaultId, primaryDevice.Id, StringComparison.Ordinal))
+        {
+            return TrayIconState.FirstDevice;
+        }
+
+        if (string.Equals(currentDefaultId, secondaryDevice.Id, StringComparison.Ordinal))
+        {
+            return TrayIconState.SecondDevice;
+        }
+
+        return TrayIconState.Error;
+    }
+
+    private string? GetCurrentDefaultDeviceId()
+    {
+        return _devices.FirstOrDefault(device => device.IsDefaultMultimedia)?.Id
+            ?? _devices.FirstOrDefault(device => device.IsDefaultConsole)?.Id
+            ?? _devices.FirstOrDefault(device => device.IsDefaultCommunications)?.Id;
     }
 
     private bool TryApplyStartupPreference(bool enabled, out string? errorMessage)

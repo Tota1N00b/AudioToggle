@@ -2,16 +2,18 @@
 
 A small Windows 11 tray app for switching between two audio output devices with one click.
 
-Audio Toggle runs quietly in the notification area. Double-click the tray icon, or right-click it and choose `Open Settings`, to choose up to two playback devices. Single-click the tray icon whenever you want to switch output.
+Audio Toggle runs quietly in the notification area. The tray icon shows whether setup needs attention, device 1 is active, or device 2 is active. Double-click the tray icon, or right-click it and choose `Open Settings`, to choose up to two playback devices. Single-click the tray icon whenever you want to switch output.
 
 ## Features
 
 - Single-click tray icon toggle between two selected output devices.
+- Stateful tray icon shows setup/error, device 1, and device 2 states at a glance.
 - Double-click tray icon opens the settings window.
 - Right-click tray menu includes `Open Settings`, `Toggle Output`, `Refresh Devices`, and `Exit`.
 - Clean Windows 11 / Fluent-inspired UI.
 - Follows the system light or dark theme.
 - Shows active playback devices, selected devices, missing devices, and current output.
+- Selected device cards mirror the tray's 1/2 state icons, so the mapping is visible without hovering.
 - Optional "Open on startup" checkbox.
 - No admin privileges required.
 - No registry editing for audio switching.
@@ -21,7 +23,7 @@ Audio Toggle runs quietly in the notification area. Double-click the tray icon, 
 
 ## Interface
 
-The settings window is intentionally simple: choose up to two output devices, refresh when a device is added, and toggle instantly for testing.
+The settings window is intentionally simple: choose up to two output devices, see which one is current, and toggle instantly for testing. Selected devices carry the same 1/2 symbols used by the tray icon.
 
 ![Audio Toggle dark mode](./docs/images/ui-dark.png)
 
@@ -59,15 +61,15 @@ Installer\Output\
 
 ## Setup Flow
 
-Choose devices from a simple list. Selected devices are saved automatically.
+Choose devices from a simple list. Selected devices are saved automatically, and the first and second selections become the tray's 1 and 2 states.
 
 ![Step 1: no devices selected](./docs/images/step-1.png)
 
-Select one device.
+Select one device. It becomes device 1.
 
 ![Step 2: one device selected](./docs/images/step-2.png)
 
-Select a second device and you are ready to toggle.
+Select a second device and you are ready to toggle. The tray icon now switches between device 1 and device 2 as the output changes.
 
 ![Step 3: two devices selected](./docs/images/step-3.png)
 

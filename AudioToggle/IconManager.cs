@@ -2,29 +2,44 @@ using Microsoft.Win32;
 
 namespace AudioToggle;
 
+internal enum TrayIconState
+{
+    Error,
+    FirstDevice,
+    SecondDevice
+}
+
 internal sealed class IconManager : IDisposable
 {
     private const string PersonalizeRegistryPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
     private const string SystemThemeValueName = "SystemUsesLightTheme";
     private const string AppsThemeValueName = "AppsUseLightTheme";
 
-    private readonly string _lightIconPath;
-    private readonly string _darkIconPath;
     private readonly string _appIconPath;
+    private readonly string _errorLightIconPath;
+    private readonly string _errorDarkIconPath;
+    private readonly string _firstLightIconPath;
+    private readonly string _firstDarkIconPath;
+    private readonly string _secondLightIconPath;
+    private readonly string _secondDarkIconPath;
 
     public IconManager()
     {
         _appIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "audio-toggle-app.ico");
-        _lightIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "audio-toggle-light.ico");
-        _darkIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "audio-toggle-dark.ico");
+        _errorLightIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "audio-toggle-error-light.ico");
+        _errorDarkIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "audio-toggle-error-dark.ico");
+        _firstLightIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "audio-toggle-1-light.ico");
+        _firstDarkIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "audio-toggle-1-dark.ico");
+        _secondLightIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "audio-toggle-2-light.ico");
+        _secondDarkIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "audio-toggle-2-dark.ico");
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
     }
 
     public event EventHandler? ThemeChanged;
 
-    public Icon CreateTrayIcon()
+    public Icon CreateTrayIcon(TrayIconState state)
     {
-        return new Icon(GetThemeAwareIconPath());
+        return new Icon(GetThemeAwareIconPath(state));
     }
 
     public Icon CreateWindowIcon()
@@ -37,9 +52,15 @@ internal sealed class IconManager : IDisposable
         SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
     }
 
-    private string GetThemeAwareIconPath()
+    private string GetThemeAwareIconPath(TrayIconState state)
     {
-        return IsSystemUsingLightTheme() ? _lightIconPath : _darkIconPath;
+        var useLightIcon = IsSystemUsingLightTheme();
+        return state switch
+        {
+            TrayIconState.FirstDevice => useLightIcon ? _firstLightIconPath : _firstDarkIconPath,
+            TrayIconState.SecondDevice => useLightIcon ? _secondLightIconPath : _secondDarkIconPath,
+            _ => useLightIcon ? _errorLightIconPath : _errorDarkIconPath
+        };
     }
 
     private static bool IsSystemUsingLightTheme()

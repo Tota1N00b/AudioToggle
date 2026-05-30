@@ -6,6 +6,8 @@ Minimal Windows 11 tray app built with C# and .NET 8 that toggles between two sa
 
 - Starts directly in the system tray with no main window on launch
 - Single left-click toggles between two saved playback devices
+- Uses state-aware tray icons for setup/error, selected device 1, and selected device 2
+- Mirrors the 1/2 tray state icons on selected device cards in settings
 - Double left-click opens a compact settings window
 - Uses a 275 ms click delay so single-click toggle and double-click settings do not conflict
 - Lists all active render/playback devices and shows current default-role status
@@ -13,6 +15,7 @@ Minimal Windows 11 tray app built with C# and .NET 8 that toggles between two sa
 - Sets the default output device for `Console`, `Multimedia`, and `Communications`
 - Handles missing or unplugged devices without crashing
 - Includes tray menu actions for settings, toggle, refresh, and exit
+- Shows the app name and current output on separate lines in the tray tooltip
 - Optional "Open on startup" checkbox backed by a shortcut in the current user's Startup folder
 - Uses the app icon for the `.exe`, tray icon, and portable shell integration
 - Creates a Start Menu shortcut for portable builds so Windows notifications can use the app identity instead of a generic executable icon

@@ -127,7 +127,9 @@ internal sealed class SettingsForm : Form
         foreach (var device in devices)
         {
             var (title, subtitle) = DeviceNameParser.Split(device.FriendlyName);
-            if (selectedSet.Contains(device.Id))
+            var selectedIndex = selectedIdsInOrder.FindIndex(selectedId => string.Equals(selectedId, device.Id, StringComparison.Ordinal));
+            var isSelected = selectedIndex >= 0;
+            if (isSelected)
             {
                 selectedDeviceNames.Add(device.FriendlyName);
             }
@@ -137,7 +139,8 @@ internal sealed class SettingsForm : Form
                 Id = device.Id,
                 Title = title,
                 Subtitle = subtitle,
-                IsSelected = selectedSet.Contains(device.Id),
+                IsSelected = isSelected,
+                SelectedSlot = isSelected ? selectedIndex + 1 : null,
                 IsCurrentOutput = device.IsCurrentOutput,
                 IsMissing = false,
                 IsDisabled = selectionLocked && !selectedSet.Contains(device.Id)
@@ -153,6 +156,7 @@ internal sealed class SettingsForm : Form
                 Title = "Saved device unavailable",
                 Subtitle = ShortenId(missingId),
                 IsSelected = true,
+                SelectedSlot = selectedIdsInOrder.FindIndex(selectedId => string.Equals(selectedId, missingId, StringComparison.Ordinal)) + 1,
                 IsCurrentOutput = false,
                 IsMissing = true,
                 IsDisabled = false
@@ -598,6 +602,7 @@ internal sealed class DeviceCardModel
     public required string Title { get; init; }
     public string? Subtitle { get; init; }
     public bool IsSelected { get; init; }
+    public int? SelectedSlot { get; init; }
     public bool IsCurrentOutput { get; init; }
     public bool IsMissing { get; init; }
     public bool IsDisabled { get; init; }
@@ -605,6 +610,9 @@ internal sealed class DeviceCardModel
 
 internal sealed class DeviceCardControl : Control
 {
+    private const int StateIconSize = 24;
+    private static readonly Dictionary<string, Image> StateIconCache = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly DeviceCardModel _model;
     private ThemePalette _theme;
     private bool _isHovered;
@@ -712,6 +720,7 @@ internal sealed class DeviceCardControl : Control
         }
 
         DrawBadges(e.Graphics, accent);
+        DrawSelectedStateIcon(e.Graphics);
     }
 
     protected override void OnSizeChanged(EventArgs e)
@@ -801,6 +810,45 @@ internal sealed class DeviceCardControl : Control
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
             x -= badgeWidth + 8;
         }
+    }
+
+    private void DrawSelectedStateIcon(Graphics graphics)
+    {
+        if (_model.SelectedSlot is not (1 or 2))
+        {
+            return;
+        }
+
+        var image = GetSelectedStateIcon(_model.SelectedSlot.Value, _theme.IsDark);
+        if (image is null)
+        {
+            return;
+        }
+
+        var iconRect = new Rectangle(Width - StateIconSize - 28, Height - StateIconSize - 18, StateIconSize, StateIconSize);
+        graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        graphics.DrawImage(image, iconRect);
+    }
+
+    private static Image? GetSelectedStateIcon(int slot, bool isDark)
+    {
+        var fileName = $"audio-toggle-{slot}-{(isDark ? "dark" : "light")}.png";
+        if (StateIconCache.TryGetValue(fileName, out var cachedImage))
+        {
+            return cachedImage;
+        }
+
+        var path = Path.Combine(AppContext.BaseDirectory, "Assets", fileName);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        using var stream = new MemoryStream(File.ReadAllBytes(path));
+        using var loadedImage = Image.FromStream(stream);
+        var image = new Bitmap(loadedImage);
+        StateIconCache[fileName] = image;
+        return image;
     }
 
     private Color ResolveBackground(Color accent)
